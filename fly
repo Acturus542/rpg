@@ -1,0 +1,67 @@
+-- Служба ввода пользователя для обработки нажатий клавиш
+local UserInputService = game:GetService("UserInputService")
+
+-- Скорость полета
+local flySpeed = 50
+
+-- Функция, выполняемая при изменении состояния клавиши (нажата/отпущена)
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    -- Проверяем, не обрабатывается ли ввод игрой (например, ввод в текстовое поле)
+    if not gameProcessedEvent then
+        -- Если нажата клавиша "F"
+        if input.KeyCode == Enum.KeyCode.F then
+            -- Получаем локального игрока и его персонажа
+            local player = game.Players.LocalPlayer
+            local character = player.Character or player.CharacterAdded:Wait()
+            local humanoid = character:FindFirstChild("Humanoid")
+
+            -- Включаем/выключаем возможность летать
+            if humanoid then
+                humanoid.WalkSpeed = (humanoid.WalkSpeed == 0) and 16 or 0
+                humanoid.JumpPower = (humanoid.JumpPower == 0) and 50 or 0
+                -- Отключаем стандартную гравитацию
+                character.Humanoid.UseJumpPower = false
+            end
+        end
+    end
+end)
+
+-- Функция, вызываемая каждый кадр для перемещения игрока в воздухе
+game:GetService("RunService").RenderStepped:Connect(function(deltaTime)
+    local player = game.Players.LocalPlayer
+    local character = player.Character
+    if character then
+        local humanoid = character:FindFirstChild("Humanoid")
+        if humanoid and humanoid.WalkSpeed == 0 then
+            local camera = workspace.CurrentCamera
+            local moveVector = Vector3.new(0, 0, 0)
+
+            -- Управление полетом с помощью клавиш W, A, S, D, Space, Left Control
+            if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+                moveVector = moveVector + camera.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+                moveVector = moveVector - camera.CFrame.LookVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+                moveVector = moveVector - camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+                moveVector = moveVector + camera.CFrame.RightVector
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+                moveVector = moveVector + Vector3.new(0, 1, 0)
+            end
+            if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then
+                moveVector = moveVector - Vector3.new(0, 1, 0)
+            end
+
+            -- Нормализуем вектор движения, чтобы скорость была одинаковой во всех направлениях
+            if moveVector.Magnitude > 0 then
+                moveVector = moveVector.Unit * flySpeed * deltaTime
+            end
+             -- Перемещаем персонажа
+            character:MoveTo(character.HumanoidRootPart.Position + moveVector)
+        end
+    end
+end)
